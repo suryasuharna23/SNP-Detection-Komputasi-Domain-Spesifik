@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Dna, FlaskConical, BookOpen, Activity, BarChart2 } from "lucide-react";
 import { clsx } from "clsx";
-import type { PipelineResult, SensitivityResult, TabType, RunParams } from "./types";
-import { runPipeline, runSensitivity } from "./api";
+import type { AIGuide, PipelineResult, SensitivityResult, TabType, RunParams } from "./types";
+import { generateAIGuide, runPipeline, runSensitivity } from "./api";
 import { InputPanel }         from "./components/InputPanel";
 import { AlignmentViewer }    from "./components/AlignmentViewer";
 import { SNPTrack }           from "./components/SNPTrack";
@@ -13,7 +13,7 @@ import { SensitivityChart }   from "./components/SensitivityChart";
 import { ImpactBadge }        from "./components/ImpactBadge";
 import { InsightsPanel }      from "./components/InsightsPanel";
 
-type ResultTab = "insight" | "alignment" | "variants" | "charts" | "protein";
+type ResultTab = "insight" | "alignment" | "variants" | "charts" | "protein" | "report";
 
 export default function App() {
   const [tab,     setTab]     = useState<TabType>("demo");
@@ -21,6 +21,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
   const [resTab,  setResTab]  = useState<ResultTab>("insight");
+  const [aiGuide, setAiGuide] = useState<AIGuide | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const [sensLoading, setSensLoading] = useState(false);
   const [sensResult,  setSensResult]  = useState<SensitivityResult | null>(null);
@@ -30,10 +33,19 @@ export default function App() {
   });
 
   async function handleRun(params: RunParams) {
-    setLoading(true); setError(null); setResult(null);
+    setLoading(true); setError(null); setResult(null); setAiGuide(null); setAiError(null);
     try {
       const res = await runPipeline(params);
       setResult(res); setResTab("insight");
+      setLoading(false);
+      setAiLoading(true);
+      try {
+        setAiGuide(await generateAIGuide(res));
+      } catch (e) {
+        setAiError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setAiLoading(false);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
@@ -60,6 +72,7 @@ export default function App() {
     { id: "variants",  label: "Varian" },
     { id: "charts",    label: "Charts" },
     { id: "protein",   label: "Protein" },
+    { id: "report",    label: "Report" },
   ];
 
   return (
@@ -155,6 +168,34 @@ export default function App() {
                   </div>
 
                   {/* Evaluation */}
+                  <div className="card border-blue-200 bg-blue-50">
+                    <p className="section-title text-blue-700">
+                      <Dna size={14} /> Frame & ORF
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
+                      <InfoTile label="Mode" value={result.frame_mode} />
+                      <InfoTile label="Frame" value={`${result.selected_strand}${result.selected_frame}`} />
+                      <InfoTile label="Codon" value={result.codon_table.replace("_", " ")} />
+                      <InfoTile label="Gene" value={result.gene_name} />
+                      <InfoTile label="ClinVar" value={result.clinvar_lookup.requested ? `${result.clinvar_lookup.matches}/${result.clinvar_lookup.queried} real` : "simulated"} />
+                      <InfoTile label="ORF" value={result.selected_orf ? `${result.selected_orf.length_aa} aa` : "fallback"} />
+                    </div>
+                    {result.selected_orf && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs text-blue-700">
+                          Longest ORF: start {result.selected_orf.start + 1}, end {result.selected_orf.end}, strand {result.selected_orf.strand}, {result.selected_orf.length_bp} bp.
+                        </p>
+                        {result.selected_orf.protein && (
+                          <div className="rounded-lg border border-blue-100 bg-white p-2">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">ORF Protein</p>
+                            <p className="font-mono text-xs text-gray-600 break-all">{result.selected_orf.protein}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Evaluation */}
                   {result.evaluation && (
                     <div className="card border-emerald-200 bg-emerald-50">
                       <p className="section-title text-emerald-700">
@@ -186,7 +227,12 @@ export default function App() {
 
                     <div className="p-5">
                       {resTab === "insight" && (
-                        <InsightsPanel result={result} />
+                        <InsightsPanel
+                          result={result}
+                          aiGuide={aiGuide}
+                          aiLoading={aiLoading}
+                          aiError={aiError}
+                        />
                       )}
 
                       {resTab === "alignment" && (
@@ -205,6 +251,15 @@ export default function App() {
                             <FlaskConical size={14} className="text-emerald-600" />
                             Tabel Varian ({result.variants.length})
                           </p>
+                          <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-gray-700">
+                            Pathogenicity scores and ClinVar annotations are educational demonstrations only,
+                            not clinical decision-making guidance.
+                            {result.clinvar_lookup.requested && (
+                              <span className="block mt-1 text-gray-500">
+                                Real ClinVar lookup queried {result.clinvar_lookup.queried} variant(s) and matched {result.clinvar_lookup.matches}.
+                              </span>
+                            )}
+                          </div>
                           {result.variants.length === 0 ? (
                             <p className="text-gray-400 text-sm text-center py-8">
                               Tidak ada varian terdeteksi — sekuens identik.
@@ -252,6 +307,10 @@ export default function App() {
                             smpProtein={result.sample_protein}
                           />
                         </div>
+                      )}
+
+                      {resTab === "report" && (
+                        <ClinicalReport result={result} />
                       )}
                     </div>
                   </div>
@@ -488,6 +547,52 @@ function EvalMetric({ label, value, sub }: { label: string; value: number; sub?:
       {sub && <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>}
       <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function InfoTile({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-white border border-blue-100 rounded-lg p-3">
+      <div className="text-[10px] text-gray-400 uppercase tracking-wider">{label}</div>
+      <div className="text-sm font-semibold text-gray-800 truncate">{value}</div>
+    </div>
+  );
+}
+
+function ClinicalReport({ result }: { result: PipelineResult }) {
+  const highRisk = result.variants.filter((v) => v.risk_level === "HIGH RISK").length;
+  const clinvarMatches = result.variants.filter((v) => v.clinvar).length;
+  const realClinvarMatches = result.variants.filter((v) => v.clinvar?.source === "real").length;
+  return (
+    <div className="space-y-4">
+      <div className="border border-amber-200 bg-amber-50 rounded-xl p-4">
+        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">
+          Educational use only
+        </p>
+        <p className="text-sm text-gray-700">
+          Pathogenicity and ClinVar annotations are for coursework demonstration only,
+          not for clinical decision-making.
+        </p>
+        {result.clinvar_lookup.requested && (
+          <p className="mt-2 text-xs text-gray-500">
+            Real ClinVar via NCBI: {result.clinvar_lookup.matches} match(es) from {result.clinvar_lookup.queried} queried variant(s).
+          </p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <InfoTile label="Variants" value={result.stats.total} />
+        <InfoTile label="High Risk" value={highRisk} />
+        <InfoTile label="ClinVar Hits" value={result.clinvar_lookup.requested ? `${realClinvarMatches}/${clinvarMatches} real` : clinvarMatches} />
+      </div>
+
+      <div>
+        <p className="section-title">Clinical Report</p>
+        <pre className="bg-gray-950 text-gray-100 rounded-lg p-4 text-xs overflow-auto max-h-96 leading-relaxed">
+          {result.clinical_report || "No clinical report available."}
+        </pre>
       </div>
     </div>
   );

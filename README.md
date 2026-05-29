@@ -96,8 +96,16 @@ Konfigurasi environment opsional:
 SNP_CORS_ORIGINS=http://127.0.0.1:8080,http://localhost:8080
 SNP_MAX_SEQUENCE_LENGTH=5000
 SNP_MAX_SENSITIVITY_RUNS=150
+SNP_AI_TIMEOUT_SECONDS=20
+SNP_CLINVAR_TIMEOUT_SECONDS=8
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-flash-lite-latest
+NCBI_API_KEY=
+NCBI_EMAIL=
 VITE_API_BASE_URL=http://127.0.0.1:8000/api
 ```
+
+`NCBI_API_KEY` and `NCBI_EMAIL` are optional. The app can query real ClinVar without them at light demo traffic, while an API key raises the normal NCBI E-utilities request limit.
 
 Untuk deployment produksi terpisah di server sungguhan, jalankan backend sebagai proses Python terkelola dan sajikan `frontend/dist` melalui static host apa pun. Build frontend dengan `VITE_API_BASE_URL` yang mengarah ke backend publik.
 
@@ -139,6 +147,7 @@ streamlit run app.py
 | GET | `/api/health` | Status server dan limit runtime |
 | GET | `/api/presets` | Sekuens HBB wildtype dan sickle |
 | POST | `/api/run` | Jalankan pipeline SNP |
+| POST | `/api/ai/guide` | Panduan hasil berbasis Gemini |
 | POST | `/api/sensitivity` | Eksperimen sensitivitas |
 
 ## Fitur
@@ -147,7 +156,7 @@ streamlit run app.py
 - Alignment viewer dengan status match, mismatch, dan gap.
 - Deteksi SNP, insersi, dan delesi.
 - Klasifikasi dampak: silent, missense, nonsense, stop lost, start lost, frameshift, in-frame indel.
-- Insight otomatis, tabel varian, CSV export, charts, dan perbandingan protein.
+- Insight otomatis, panduan AI Gemini opsional, tabel varian, CSV export, charts, dan perbandingan protein.
 - Eksperimen sensitivitas precision, recall, dan F1 terhadap densitas SNP.
 - Generator laporan LaTeX melalui `snp.py report`.
 

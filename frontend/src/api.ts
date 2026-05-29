@@ -1,4 +1,4 @@
-import type { PipelineResult, RunParams, SensitivityResult } from "./types";
+import type { AIGuide, PipelineResult, RunParams, SensitivityResult } from "./types";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "");
 
@@ -28,6 +28,10 @@ export function runPipeline(params: RunParams): Promise<PipelineResult> {
   return post("/run", params);
 }
 
+export function generateAIGuide(result: PipelineResult): Promise<AIGuide> {
+  return post("/ai/guide", { result });
+}
+
 export function runSensitivity(params: {
   ref_length: number;
   max_snps: number;
@@ -35,4 +39,8 @@ export function runSensitivity(params: {
   n_trials: number;
 }): Promise<SensitivityResult> {
   return post("/sensitivity", params);
+}
+
+export function generateClinicalReport(result: PipelineResult): Promise<{ report: string }> {
+  return post("/clinical-report", { result });
 }

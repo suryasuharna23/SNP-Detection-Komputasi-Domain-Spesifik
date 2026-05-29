@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { AlertTriangle, CheckCircle2, Info, TrendingDown, TrendingUp } from "lucide-react";
-import type { PipelineResult } from "../types";
+import { AlertTriangle, CheckCircle2, Info, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import type { AIGuide, PipelineResult } from "../types";
 import { ImpactBadge } from "./ImpactBadge";
 
 const IMPACT_COLOR: Record<string, string> = {
@@ -133,9 +133,81 @@ function deriveConclusion(result: PipelineResult): string {
     `dan analisis lebih lanjut diperlukan untuk menentukan relevansi fungsionalnya.`;
 }
 
-interface Props { result: PipelineResult; }
+const GUIDE_STYLE: Record<AIGuide["severity"], string> = {
+  ok: "border-emerald-200 bg-emerald-50",
+  info: "border-blue-200 bg-blue-50",
+  warning: "border-amber-200 bg-amber-50",
+  critical: "border-red-200 bg-red-50",
+};
 
-export function InsightsPanel({ result }: Props) {
+interface SmartGuideProps {
+  guide: AIGuide | null;
+  loading: boolean;
+  error: string | null;
+}
+
+function SmartGuide({ guide, loading, error }: SmartGuideProps) {
+  if (loading) {
+    return (
+      <div className="border border-blue-200 bg-blue-50 rounded-xl p-4">
+        <p className="section-title text-blue-700">
+          <Sparkles size={14} /> Panduan AI
+        </p>
+        <p className="text-sm text-blue-700 animate-pulse">Gemini sedang menyusun panduan hasil...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="border border-gray-200 bg-gray-50 rounded-xl p-4">
+        <p className="section-title">
+          <Sparkles size={14} /> Panduan AI
+        </p>
+        <p className="text-sm text-gray-500">{error}</p>
+      </div>
+    );
+  }
+
+  if (!guide) return null;
+
+  return (
+    <div className={`border rounded-xl p-4 ${GUIDE_STYLE[guide.severity]}`}>
+      <p className="section-title">
+        <Sparkles size={14} /> Panduan AI
+      </p>
+      <h3 className="text-base font-semibold text-gray-900">{guide.headline}</h3>
+      <p className="text-sm text-gray-700 leading-relaxed mt-2">{guide.summary}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Temuan</p>
+          <ul className="space-y-1.5 text-sm text-gray-700">
+            {guide.key_findings.map((item, i) => <li key={i}>- {item}</li>)}
+          </ul>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Langkah Lanjut</p>
+          <ul className="space-y-1.5 text-sm text-gray-700">
+            {guide.next_steps.map((item, i) => <li key={i}>- {item}</li>)}
+          </ul>
+        </div>
+      </div>
+      {guide.limitations.length > 0 && (
+        <p className="text-xs text-gray-500 mt-4">Batasan: {guide.limitations.join(" ")}</p>
+      )}
+      <p className="text-xs text-gray-500 mt-2">{guide.disclaimer}</p>
+    </div>
+  );
+}
+
+interface Props {
+  result: PipelineResult;
+  aiGuide: AIGuide | null;
+  aiLoading: boolean;
+  aiError: string | null;
+}
+
+export function InsightsPanel({ result, aiGuide, aiLoading, aiError }: Props) {
   const { variants, stats, ref_protein, sample_protein } = result;
   const counts  = useMemo(() => countImpacts(variants), [variants]);
   const findings = useMemo(() => deriveFindings(result), [result]);
@@ -147,16 +219,20 @@ export function InsightsPanel({ result }: Props) {
 
   if (stats.total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-        <CheckCircle2 size={40} className="text-emerald-500" />
-        <p className="text-gray-700 font-semibold">Tidak ada varian terdeteksi</p>
-        <p className="text-sm text-gray-400">Kedua sekuens identik — tidak ada perbedaan nukleotida.</p>
+      <div className="space-y-5">
+        <SmartGuide guide={aiGuide} loading={aiLoading} error={aiError} />
+        <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+          <CheckCircle2 size={40} className="text-emerald-500" />
+          <p className="text-gray-700 font-semibold">Tidak ada varian terdeteksi</p>
+          <p className="text-sm text-gray-400">Kedua sekuens identik — tidak ada perbedaan nukleotida.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
+      <SmartGuide guide={aiGuide} loading={aiLoading} error={aiError} />
 
       {/* ── Impact distribution ── */}
       <div>

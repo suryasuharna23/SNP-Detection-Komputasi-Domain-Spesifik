@@ -39,7 +39,11 @@ export function VariantTable({ variants }: Props) {
   }
 
   function downloadCsv() {
-    const headers = ["Pos","Tipe","Ref","Alt","Kodon#","PosKodon","RefCodon","AltCodon","RefAA","AltAA","Dampak"];
+    const headers = [
+      "Pos","Tipe","Ref","Alt","Kodon#","PosKodon","RefCodon","AltCodon","RefAA","AltAA","Dampak",
+      "Conservation","Grantham","Region","RegionCriticality","Pathogenicity","Risk","Confidence",
+      "ClinVar","ClinVarSource","ClinicalSignificance","Condition","Recommendation",
+    ];
     const rows = sorted.map((v) => [
       v.pos, v.variant_type, v.ref, v.alt,
       v.codon_num ?? "", v.pos_in_codon ?? "",
@@ -47,6 +51,18 @@ export function VariantTable({ variants }: Props) {
       `${v.ref_aa ?? ""}(${v.ref_aa_name ?? ""})`,
       `${v.alt_aa ?? ""}(${v.alt_aa_name ?? ""})`,
       v.impact,
+      v.conservation_score ?? "",
+      v.grantham_distance ?? "",
+      v.region_type ?? "",
+      v.region_criticality ?? "",
+      v.pathogenicity_score ?? "",
+      v.risk_level ?? "",
+      v.confidence ?? "",
+      v.clinvar?.variant_id ?? "",
+      v.clinvar?.source ?? "",
+      v.clinvar?.clinical_significance ?? "",
+      v.clinvar?.condition ?? "",
+      v.recommendation ?? "",
     ]);
     const escapeCsv = (value: string | number) => {
       const text = String(value);
@@ -107,6 +123,10 @@ export function VariantTable({ variants }: Props) {
               <Th k="ref_codon">Kodon Ref→Alt</Th>
               <Th k="ref_aa">AA Ref→Alt</Th>
               <Th k="impact">Dampak</Th>
+              <Th k="pathogenicity_score">Risk</Th>
+              <Th k="conservation_score">Scores</Th>
+              <Th k="region_type">Region</Th>
+              <Th k="clinvar">ClinVar</Th>
             </tr>
           </thead>
           <tbody>
@@ -142,6 +162,54 @@ export function VariantTable({ variants }: Props) {
                 <td className="px-3 py-2">
                   <ImpactBadge impact={v.impact as any} />
                 </td>
+                <td className="px-3 py-2">
+                  {v.risk_level ? <RiskBadge risk={v.risk_level} /> : "â€”"}
+                  {v.confidence && <div className="text-[10px] text-gray-400 mt-1">{v.confidence}</div>}
+                </td>
+                <td className="px-3 py-2 text-gray-600">
+                  {v.pathogenicity_score !== null ? (
+                    <div className="space-y-0.5">
+                      <div>Path: <span className="font-mono">{v.pathogenicity_score.toFixed(4)}</span></div>
+                      <div>Cons: <span className="font-mono">{v.conservation_score?.toFixed(4) ?? "â€”"}</span></div>
+                      <div>G: <span className="font-mono">{v.grantham_distance ?? "â€”"}</span></div>
+                    </div>
+                  ) : "â€”"}
+                </td>
+                <td className="px-3 py-2 text-gray-600">
+                  {v.region_type ? (
+                    <>
+                      <div className="font-semibold">{v.region_type}</div>
+                      <div className="text-[10px] text-gray-400">{v.region_criticality?.toFixed(2)}</div>
+                    </>
+                  ) : "â€”"}
+                </td>
+                <td className="px-3 py-2 text-gray-600 min-w-44">
+                  {v.clinvar ? (
+                    <div>
+                      <div className="flex items-center gap-2">
+                        {v.clinvar.url ? (
+                          <a
+                            href={v.clinvar.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-emerald-700 font-semibold hover:underline"
+                          >
+                            {v.clinvar.variant_id}
+                          </a>
+                        ) : (
+                          <div className="font-mono text-emerald-700 font-semibold">{v.clinvar.variant_id}</div>
+                        )}
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[9px] uppercase text-gray-500">
+                          {v.clinvar.source ?? "simulated"}
+                        </span>
+                      </div>
+                      <div className="text-[11px]">{v.clinvar.clinical_significance}</div>
+                      <div className="text-[10px] text-gray-400">{v.clinvar.condition}</div>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">No ClinVar match</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -154,4 +222,14 @@ export function VariantTable({ variants }: Props) {
       </div>
     </div>
   );
+}
+
+function RiskBadge({ risk }: { risk: NonNullable<Variant["risk_level"]> }) {
+  const cls = {
+    "HIGH RISK": "bg-red-100 text-red-700 ring-red-300",
+    "MODERATE RISK": "bg-amber-100 text-amber-700 ring-amber-300",
+    "LOW RISK": "bg-blue-100 text-blue-700 ring-blue-300",
+    BENIGN: "bg-emerald-100 text-emerald-700 ring-emerald-300",
+  }[risk];
+  return <span className={`impact-badge ring-1 ${cls}`}>{risk}</span>;
 }

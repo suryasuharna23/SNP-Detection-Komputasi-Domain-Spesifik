@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Play, FlaskConical, Dna, PenLine } from "lucide-react";
-import type { DatasetType, RunParams } from "../types";
+import type { ClinVarSource, CodonTableType, DatasetType, FrameMode, GeneAnnotation, RunParams } from "../types";
 
 const HBB_WT = "ATGGTGCATCTGACTCCTGAGGAGAAGTCTGCCGTTACTGCCCTGTGGGGCAAGGTGAAC";
 const HBB_SC = "ATGGTGCATCTGACTCCTGTGGAGAAGTCTGCCGTTACTGCCCTGTGGGGCAAGGTGAAC";
@@ -14,6 +14,15 @@ export function InputPanel({ onRun, loading }: Props) {
   const [gc,      setGc]      = useState(50);
   const [seed,    setSeed]    = useState(42);
   const [frame,   setFrame]   = useState(0);
+  const [frameMode, setFrameMode] = useState<FrameMode>("manual");
+  const [codonTable, setCodonTable] = useState<CodonTableType>("standard");
+  const [clinvarSource, setClinvarSource] = useState<ClinVarSource>("simulated");
+  const [geneName, setGeneName] = useState("");
+  const [showAnnotation, setShowAnnotation] = useState(false);
+  const [annotationStrand, setAnnotationStrand] = useState<"+" | "-">("+");
+  const [annotationExons, setAnnotationExons] = useState("");
+  const [annotationCdsStart, setAnnotationCdsStart] = useState(0);
+  const [annotationCdsEnd, setAnnotationCdsEnd] = useState(0);
   const [refSeq,  setRefSeq]  = useState("");
   const [smpSeq,  setSmpSeq]  = useState("");
 
@@ -22,12 +31,40 @@ export function InputPanel({ onRun, loading }: Props) {
     (dataset !== "custom" || (refSeq.trim().length >= 3 && smpSeq.trim().length >= 3));
 
   function handleRun() {
+    const refLength = dataset === "custom" ? refSeq.trim().length : dataset === "hbb" ? HBB_WT.length : seqLen;
+    const annotation = parseAnnotation(refLength);
     onRun({
       dataset,
       ref_seq:    dataset === "custom" ? refSeq.trim() : undefined,
       sample_seq: dataset === "custom" ? smpSeq.trim() : undefined,
       seq_length: seqLen, n_snps: nSnps, gc_content: gc / 100, seed, frame,
+      frame_mode: frameMode,
+      codon_table: codonTable,
+      clinvar_source: clinvarSource,
+      gene_name: geneName.trim() || undefined,
+      annotation,
     });
+  }
+
+  function parseAnnotation(refLength: number): GeneAnnotation | undefined {
+    if (!showAnnotation) return undefined;
+    const exons = annotationExons
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const [start, end] = part.split("-").map((item) => Number(item.trim()));
+        return [start, end] as [number, number];
+      })
+      .filter(([start, end]) => Number.isFinite(start) && Number.isFinite(end));
+    return {
+      gene_name: geneName.trim() || undefined,
+      strand: annotationStrand,
+      total_length: refLength,
+      exons: exons.length ? exons : [[0, refLength]],
+      cds_start: annotationCdsStart,
+      cds_end: annotationCdsEnd || refLength,
+    };
   }
 
   const DATASETS: { id: DatasetType; icon: React.ReactNode; label: string; desc: string }[] = [
@@ -111,6 +148,97 @@ export function InputPanel({ onRun, loading }: Props) {
         </div>
       )}
 
+      {/* Extended analysis */}
+      <div className="space-y-3 border-t border-gray-100 pt-4">
+        <div>
+          <p className="label">Mode Frame</p>
+          <div className="grid grid-cols-2 gap-2">
+            {(["manual", "automatic"] as const).map((mode) => (
+              <button key={mode} onClick={() => setFrameMode(mode)}
+                className={`py-1.5 rounded-lg text-sm border transition-colors capitalize
+                  ${frameMode === mode
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                  }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="label">Codon Table</p>
+          <select className="input" value={codonTable}
+            onChange={(e) => setCodonTable(e.target.value as CodonTableType)}>
+            <option value="standard">Standard</option>
+            <option value="vertebrate_mitochondrial">Vertebrate mitochondrial</option>
+          </select>
+        </div>
+
+        <div>
+          <p className="label">ClinVar Lookup</p>
+          <select className="input" value={clinvarSource}
+            onChange={(e) => setClinvarSource(e.target.value as ClinVarSource)}>
+            <option value="simulated">Simulated demo database</option>
+            <option value="real">Real ClinVar via NCBI</option>
+            <option value="both">Real ClinVar + simulated fallback</option>
+          </select>
+          <p className="text-[11px] text-gray-400 mt-1">
+            Real lookup is best for known variants with clear gene/transcript mapping.
+          </p>
+        </div>
+
+        <div>
+          <p className="label">Gene Name</p>
+          <input className="input" placeholder={dataset === "hbb" ? "HBB" : "UNKNOWN"}
+            value={geneName} onChange={(e) => setGeneName(e.target.value.toUpperCase())} />
+        </div>
+
+        <div>
+          <button type="button" className="btn-secondary !py-1.5 !px-3 text-xs w-full justify-center"
+            onClick={() => setShowAnnotation((value) => !value)}>
+            {showAnnotation ? "Hide Gene Annotation" : "Gene Annotation"}
+          </button>
+          {showAnnotation && (
+            <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div>
+                <p className="label">Annotation Strand</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["+", "-"] as const).map((strand) => (
+                    <button key={strand} type="button" onClick={() => setAnnotationStrand(strand)}
+                      className={`py-1.5 rounded-lg text-sm border transition-colors
+                        ${annotationStrand === strand
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                        }`}>
+                      {strand}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="label">Exons</p>
+                <input className="input font-mono text-xs" placeholder="0-60, 120-180"
+                  value={annotationExons} onChange={(e) => setAnnotationExons(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="label">CDS Start</p>
+                  <input type="number" className="input" value={annotationCdsStart}
+                    onChange={(e) => setAnnotationCdsStart(Number(e.target.value))} />
+                </div>
+                <div>
+                  <p className="label">CDS End</p>
+                  <input type="number" className="input" value={annotationCdsEnd}
+                    onChange={(e) => setAnnotationCdsEnd(Number(e.target.value))} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Frame */}
       <div>
         <p className="label">Reading Frame</p>
@@ -127,6 +255,11 @@ export function InputPanel({ onRun, loading }: Props) {
             </button>
           ))}
         </div>
+        {frameMode === "automatic" && (
+          <p className="text-[11px] text-gray-400 mt-1">
+            Automatic mode uses the longest detected ORF; manual frame is kept as fallback.
+          </p>
+        )}
       </div>
 
       {/* Run */}

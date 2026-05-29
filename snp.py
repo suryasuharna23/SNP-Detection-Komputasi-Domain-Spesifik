@@ -27,6 +27,24 @@ ROOT = Path(__file__).resolve().parent
 BACKEND = ROOT / "backend"
 FRONTEND = ROOT / "frontend"
 REPORTS = ROOT / "reports"
+
+
+def load_project_env() -> None:
+    env_path = ROOT / ".env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
+load_project_env()
+
 DEFAULT_BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 DEFAULT_DEV_FRONTEND_PORT = int(os.getenv("FRONTEND_PORT", "5173"))
 DEFAULT_PROD_FRONTEND_PORT = int(os.getenv("FRONTEND_PORT", "8080"))
@@ -160,6 +178,13 @@ def cmd_app(args: argparse.Namespace) -> int:
         "--port",
         str(args.frontend_port),
     ]
+    backend_env = os.environ.copy()
+    backend_env["SNP_CORS_ORIGINS"] = (
+        f"http://127.0.0.1:{args.frontend_port},"
+        f"http://localhost:{args.frontend_port}"
+    )
+    frontend_env = os.environ.copy()
+    frontend_env["VITE_API_BASE_URL"] = "/api"
 
     print_step(f"backend:  http://localhost:{args.backend_port}")
     print_step(f"frontend: http://localhost:{args.frontend_port}")
@@ -174,6 +199,7 @@ def cmd_app(args: argparse.Namespace) -> int:
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            env=backend_env,
         )
         procs.append(backend_proc)
         stream_process("backend", backend_proc)
@@ -185,6 +211,7 @@ def cmd_app(args: argparse.Namespace) -> int:
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            env=frontend_env,
         )
         procs.append(frontend_proc)
         stream_process("frontend", frontend_proc)
