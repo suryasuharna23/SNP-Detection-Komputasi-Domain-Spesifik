@@ -4,6 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        sans: ["Figtree", "system-ui", "sans-serif"],
         mono: ["'JetBrains Mono'", "Fira Code", "Consolas", "monospace"],
       },
       colors: {

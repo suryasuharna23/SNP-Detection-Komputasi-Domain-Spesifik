@@ -5,10 +5,7 @@ import type { DatasetType, RunParams } from "../types";
 const HBB_WT = "ATGGTGCATCTGACTCCTGAGGAGAAGTCTGCCGTTACTGCCCTGTGGGGCAAGGTGAAC";
 const HBB_SC = "ATGGTGCATCTGACTCCTGTGGAGAAGTCTGCCGTTACTGCCCTGTGGGGCAAGGTGAAC";
 
-interface Props {
-  onRun: (p: RunParams) => void;
-  loading: boolean;
-}
+interface Props { onRun: (p: RunParams) => void; loading: boolean; }
 
 export function InputPanel({ onRun, loading }: Props) {
   const [dataset, setDataset] = useState<DatasetType>("synthetic");
@@ -29,18 +26,14 @@ export function InputPanel({ onRun, loading }: Props) {
       dataset,
       ref_seq:    dataset === "custom" ? refSeq : undefined,
       sample_seq: dataset === "custom" ? smpSeq : undefined,
-      seq_length: seqLen,
-      n_snps:     nSnps,
-      gc_content: gc / 100,
-      seed,
-      frame,
+      seq_length: seqLen, n_snps: nSnps, gc_content: gc / 100, seed, frame,
     });
   }
 
   const DATASETS: { id: DatasetType; icon: React.ReactNode; label: string; desc: string }[] = [
-    { id: "synthetic", icon: <FlaskConical size={14} />, label: "Sintetik", desc: "Kontrol ground truth" },
-    { id: "hbb",       icon: <Dna size={14} />,          label: "HBB Sickle-Cell", desc: "Kasus biologis nyata" },
-    { id: "custom",    icon: <PenLine size={14} />,       label: "Custom", desc: "Masukkan sendiri" },
+    { id: "synthetic", icon: <FlaskConical size={14} />, label: "Sintetik",       desc: "Ground truth terkendali" },
+    { id: "hbb",       icon: <Dna size={14} />,          label: "HBB Sickle",     desc: "Kasus biologis nyata" },
+    { id: "custom",    icon: <PenLine size={14} />,       label: "Custom",         desc: "Masukkan sendiri" },
   ];
 
   return (
@@ -56,75 +49,64 @@ export function InputPanel({ onRun, loading }: Props) {
               className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs
                 transition-all duration-150 text-center
                 ${dataset === d.id
-                  ? "border-emerald-500 bg-emerald-950/50 text-emerald-300"
-                  : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm"
+                  : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                 }`}
             >
-              <span className="text-base">{d.icon}</span>
+              <span>{d.icon}</span>
               <span className="font-semibold">{d.label}</span>
-              <span className="text-slate-500 text-[10px]">{d.desc}</span>
+              <span className={`text-[10px] ${dataset === d.id ? "text-emerald-500" : "text-gray-400"}`}>
+                {d.desc}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Dataset-specific inputs */}
+      {/* Synthetic params */}
       {dataset === "synthetic" && (
         <div className="space-y-3">
-          <Slider
-            label={`Panjang sekuens: ${seqLen} bp`}
-            min={60} max={900} step={30} value={seqLen}
-            onChange={setSeqLen}
-          />
-          <Slider
-            label={`Jumlah SNP: ${nSnps}`}
-            min={1} max={Math.max(1, Math.floor(seqLen / 6))} value={nSnps}
-            onChange={setNSnps}
-          />
-          <Slider
-            label={`GC content: ${gc}%`}
-            min={30} max={70} value={gc}
-            onChange={setGc}
-          />
+          <Slider label={`Panjang sekuens: ${seqLen} bp`} min={60} max={900} step={30}
+            value={seqLen} onChange={setSeqLen} />
+          <Slider label={`Jumlah SNP: ${nSnps}`} min={1} max={Math.max(1, Math.floor(seqLen / 6))}
+            value={nSnps} onChange={setNSnps} />
+          <Slider label={`GC content: ${gc}%`} min={30} max={70}
+            value={gc} onChange={setGc} />
           <div>
             <p className="label">Random Seed</p>
-            <input
-              type="number" className="input" value={seed}
-              onChange={(e) => setSeed(Number(e.target.value))}
-            />
+            <input type="number" className="input" value={seed}
+              onChange={(e) => setSeed(Number(e.target.value))} />
           </div>
         </div>
       )}
 
+      {/* HBB info */}
       {dataset === "hbb" && (
         <div className="space-y-2 text-xs">
-          <div className="card !p-3 space-y-1.5">
-            <p className="text-emerald-400 font-semibold text-[11px] uppercase tracking-wider">Wild-type HBB</p>
-            <p className="font-mono text-[11px] text-slate-400 break-all">{HBB_WT}</p>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-1.5">
+            <p className="text-emerald-700 font-semibold text-[11px] uppercase tracking-wider">Wild-type HBB</p>
+            <p className="font-mono text-[11px] text-gray-600 break-all">{HBB_WT}</p>
           </div>
-          <div className="card !p-3 space-y-1.5">
-            <p className="text-red-400 font-semibold text-[11px] uppercase tracking-wider">Sickle-Cell HBB</p>
-            <p className="font-mono text-[11px] text-slate-400 break-all">{HBB_SC}</p>
-            <p className="text-slate-600">Mutasi A→T pos.20 menyebabkan Glu→Val (kodon GAG→GTG)</p>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-1.5">
+            <p className="text-red-600 font-semibold text-[11px] uppercase tracking-wider">Sickle-Cell HBB</p>
+            <p className="font-mono text-[11px] text-gray-600 break-all">{HBB_SC}</p>
+            <p className="text-gray-400">A→T pos.20 menyebabkan Glu→Val (GAG→GTG)</p>
           </div>
         </div>
       )}
 
+      {/* Custom input */}
       {dataset === "custom" && (
         <div className="space-y-3">
           <div>
             <p className="label">Sekuens Referensi (DNA)</p>
-            <textarea
-              className="textarea h-20" placeholder="ATGGTGCATCTG…"
-              value={refSeq} onChange={(e) => setRefSeq(e.target.value)}
-            />
+            <textarea className="textarea h-20" placeholder="ATGGTGCATCTG…"
+              value={refSeq} onChange={(e) => setRefSeq(e.target.value)} />
           </div>
           <div>
             <p className="label">Sekuens Sampel (DNA)</p>
-            <textarea
-              className="textarea h-20" placeholder="ATGGTGCATCTG…"
-              value={smpSeq} onChange={(e) => setSmpSeq(e.target.value)}
-            />
+            <textarea className="textarea h-20" placeholder="ATGGTGCATCTG…"
+              value={smpSeq} onChange={(e) => setSmpSeq(e.target.value)} />
           </div>
         </div>
       )}
@@ -134,13 +116,11 @@ export function InputPanel({ onRun, loading }: Props) {
         <p className="label">Reading Frame</p>
         <div className="flex gap-2">
           {[0, 1, 2].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFrame(f)}
-              className={`flex-1 py-1.5 rounded-lg text-sm font-mono transition-colors
+            <button key={f} onClick={() => setFrame(f)}
+              className={`flex-1 py-1.5 rounded-lg text-sm font-mono border transition-colors
                 ${frame === f
-                  ? "bg-emerald-700 text-white"
-                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                  : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
                 }`}
             >
               +{f}
@@ -149,12 +129,9 @@ export function InputPanel({ onRun, loading }: Props) {
         </div>
       </div>
 
-      {/* Run button */}
-      <button
-        className="btn-primary w-full justify-center text-base py-3"
-        onClick={handleRun}
-        disabled={!canRun}
-      >
+      {/* Run */}
+      <button className="btn-primary w-full justify-center text-base py-3"
+        onClick={handleRun} disabled={!canRun}>
         {loading ? (
           <span className="flex items-center gap-2">
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -171,21 +148,17 @@ export function InputPanel({ onRun, loading }: Props) {
   );
 }
 
-function Slider({
-  label, min, max, step = 1, value, onChange,
-}: {
+function Slider({ label, min, max, step = 1, value, onChange }: {
   label: string; min: number; max: number; step?: number; value: number;
   onChange: (v: number) => void;
 }) {
   return (
     <div>
       <p className="label">{label}</p>
-      <input
-        type="range" min={min} max={max} step={step} value={value}
+      <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-emerald-500 cursor-pointer"
-      />
-      <div className="flex justify-between text-[10px] text-slate-600 mt-0.5">
+        className="w-full accent-emerald-600 cursor-pointer" />
+      <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
         <span>{min}</span><span>{max}</span>
       </div>
     </div>
