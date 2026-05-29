@@ -2,15 +2,26 @@
 
 Tugas mata kuliah IF3211 - Komputasi Domain Spesifik, Institut Teknologi Bandung.
 
-Pipeline Python untuk mendeteksi Single-Nucleotide Polymorphism (SNP) pada sekuens DNA menggunakan global alignment Needleman-Wunsch, dilengkapi web app interaktif dan generator laporan LaTeX.
+Pipeline Python untuk mendeteksi Single-Nucleotide Polymorphism (SNP) pada sekuens DNA menggunakan global alignment Needleman-Wunsch, dilengkapi web app.
+
+## Tim
+
+| Nama | NIM |
+| --- | --- |
+| Surya Suharna | 18223075 |
+| Muhammad Faiz Alfikrona | 18223009 |
+| Ni Made Sekar Jelita P. | 18223101 |
 
 ## Arsitektur
 
 ```text
 backend/   FastAPI + pipeline bioinformatika   -> port 8000
 frontend/  React + TypeScript + Tailwind       -> port 5173 dev, port 8080 prod-like
+notebook/  Jupyter Notebook pipeline SNP detection (snp_detection_pipeline_extended.ipynb)
 app.py     Streamlit standalone alternatif
 snp.py     CLI lintas platform untuk install, app, smoke, report, dan ci
+doc/       Laporan dan dokumentasi proyek
+slides/    Slide presentasi
 ```
 
 ## Quick Start Demo
@@ -45,21 +56,6 @@ Jika backend berjalan di URL lain:
 python snp.py smoke --backend-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173
 ```
 
-## Generate Laporan LaTeX
-
-```bash
-python snp.py report --dataset hbb
-python snp.py report --dataset synthetic --seq-length 300 --n-snps 12 --seed 42 --csv
-python snp.py report --dataset custom --ref ATGCGTTAA --sample ATGCGTTAA --no-pdf
-```
-
-Output ditulis ke `reports/`.
-
-- File `.tex` selalu dibuat.
-- File `.pdf` dibuat hanya jika `latexmk`, `xelatex`, atau `pdflatex` tersedia.
-- Gunakan `--no-pdf` untuk memaksa output `.tex` saja.
-- Gunakan `--csv` untuk menulis CSV varian di samping laporan.
-
 ## Production-Like Lokal
 
 ```bash
@@ -89,25 +85,6 @@ python snp.py serve-frontend
 # Smoke test stack production-like
 python snp.py smoke --backend-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:8080
 ```
-
-Konfigurasi environment opsional:
-
-```env
-SNP_CORS_ORIGINS=http://127.0.0.1:8080,http://localhost:8080
-SNP_MAX_SEQUENCE_LENGTH=5000
-SNP_MAX_SENSITIVITY_RUNS=150
-SNP_AI_TIMEOUT_SECONDS=20
-SNP_CLINVAR_TIMEOUT_SECONDS=8
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-flash-lite-latest
-NCBI_API_KEY=
-NCBI_EMAIL=
-VITE_API_BASE_URL=http://127.0.0.1:8000/api
-```
-
-`NCBI_API_KEY` and `NCBI_EMAIL` are optional. The app can query real ClinVar without them at light demo traffic, while an API key raises the normal NCBI E-utilities request limit.
-
-Untuk deployment produksi terpisah di server sungguhan, jalankan backend sebagai proses Python terkelola dan sajikan `frontend/dist` melalui static host apa pun. Build frontend dengan `VITE_API_BASE_URL` yang mengarah ke backend publik.
 
 ## Manual Development
 
@@ -149,6 +126,8 @@ streamlit run app.py
 | POST | `/api/run` | Jalankan pipeline SNP |
 | POST | `/api/ai/guide` | Panduan hasil berbasis Gemini |
 | POST | `/api/sensitivity` | Eksperimen sensitivitas |
+| POST | `/api/clinical` | Analisis klinis extended per varian |
+| GET | `/api/clinvar/{rsid}` | Lookup data ClinVar nyata via NCBI E-utilities |
 
 ## Fitur
 
@@ -158,7 +137,9 @@ streamlit run app.py
 - Klasifikasi dampak: silent, missense, nonsense, stop lost, start lost, frameshift, in-frame indel.
 - Insight otomatis, panduan AI Gemini opsional, tabel varian, CSV export, charts, dan perbandingan protein.
 - Eksperimen sensitivitas precision, recall, dan F1 terhadap densitas SNP.
-- Generator laporan LaTeX melalui `snp.py report`.
+- Analisis klinis extended: lookup ClinVar nyata via NCBI E-utilities, skor patogenisitas, anotasi fenotip, dan rekomendasi klinis berbasis AI.
+- Jupyter Notebook pipeline lengkap di `notebook/snp_detection_pipeline_extended.ipynb` untuk eksplorasi dan reproduksi eksperimen.
+- Web app interaktif (React + TypeScript + Tailwind) di direktori `frontend/`.
 
 ## Test Cases Custom Dataset, Frame 0
 
