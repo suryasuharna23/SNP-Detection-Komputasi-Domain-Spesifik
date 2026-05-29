@@ -1,183 +1,200 @@
 # SNP Detection Pipeline
 
-Tugas mata kuliah IF3211 — Komputasi Domain Spesifik, Institut Teknologi Bandung.
+Tugas mata kuliah IF3211 - Komputasi Domain Spesifik, Institut Teknologi Bandung.
 
-Pipeline Python untuk mendeteksi Single-Nucleotide Polymorphism (SNP) pada sekuens DNA menggunakan global alignment Needleman–Wunsch, dilengkapi web app interaktif.
-
----
+Pipeline Python untuk mendeteksi Single-Nucleotide Polymorphism (SNP) pada sekuens DNA menggunakan global alignment Needleman-Wunsch, dilengkapi web app interaktif dan generator laporan LaTeX.
 
 ## Arsitektur
 
-```
-backend/   FastAPI (Python) — pipeline + REST API  → port 8000
-frontend/  React + TypeScript + Tailwind           → port 5173
-app.py     Streamlit (alternatif, standalone)
-```
-
----
-
-## Cara Menjalankan
-
-### Keduanya sekaligus (PowerShell)
-
-```powershell
-cd SNP-Detection-Komputasi-Domain-Spesifik
-powershell -ExecutionPolicy Bypass -File .\start.ps1
+```text
+backend/   FastAPI + pipeline bioinformatika   -> port 8000
+frontend/  React + TypeScript + Tailwind       -> port 5173 dev, port 8080 prod-like
+app.py     Streamlit standalone alternatif
+snp.py     CLI lintas platform untuk install, app, smoke, report, dan ci
 ```
 
-Buka http://localhost:5173
+## Quick Start Demo
 
-### Manual (2 terminal)
+```bash
+python snp.py install
+python snp.py app
+```
 
-**Terminal 1 — Backend**
-```powershell
+Buka:
+
+- App: http://localhost:5173
+- API docs: http://localhost:8000/docs
+
+`python snp.py app` hanya menandai app siap setelah backend `/api/health` dan frontend sudah bisa diakses.
+
+## Pemeriksaan Dan Smoke Test
+
+```bash
+python snp.py check
+python snp.py smoke
+python snp.py ci
+```
+
+- `check` memeriksa Python, npm, dependency backend, dependency frontend, dan LaTeX engine opsional.
+- `smoke` menjalankan API smoke test terhadap backend yang sedang hidup, lalu membuat laporan `.tex`.
+- `ci` menjalankan compile check Python, report generation, frontend type-check, dan frontend production build.
+
+Jika backend berjalan di URL lain:
+
+```bash
+python snp.py smoke --backend-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:5173
+```
+
+## Generate Laporan LaTeX
+
+```bash
+python snp.py report --dataset hbb
+python snp.py report --dataset synthetic --seq-length 300 --n-snps 12 --seed 42 --csv
+python snp.py report --dataset custom --ref ATGCGTTAA --sample ATGCGTTAA --no-pdf
+```
+
+Output ditulis ke `reports/`.
+
+- File `.tex` selalu dibuat.
+- File `.pdf` dibuat hanya jika `latexmk`, `xelatex`, atau `pdflatex` tersedia.
+- Gunakan `--no-pdf` untuk memaksa output `.tex` saja.
+- Gunakan `--csv` untuk menulis CSV varian di samping laporan.
+
+## Production-Like Lokal
+
+```bash
+python snp.py prod
+```
+
+Default:
+
+- Frontend: http://localhost:8080
+- Backend: http://localhost:8000
+
+`prod` menjalankan dua service terpisah secara lokal:
+
+- Backend FastAPI tanpa reload.
+- Frontend dari hasil build `frontend/dist`, disajikan oleh static server Python.
+- Readiness check untuk kedua service sebelum URL ditandai siap.
+
+Perintah terkait:
+
+```bash
+# Build frontend produksi saja
+python snp.py build
+
+# Serve frontend/dist saja
+python snp.py serve-frontend
+
+# Smoke test stack production-like
+python snp.py smoke --backend-url http://127.0.0.1:8000 --frontend-url http://127.0.0.1:8080
+```
+
+Konfigurasi environment opsional:
+
+```env
+SNP_CORS_ORIGINS=http://127.0.0.1:8080,http://localhost:8080
+SNP_MAX_SEQUENCE_LENGTH=5000
+SNP_MAX_SENSITIVITY_RUNS=150
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+```
+
+Untuk deployment produksi terpisah di server sungguhan, jalankan backend sebagai proses Python terkelola dan sajikan `frontend/dist` melalui static host apa pun. Build frontend dengan `VITE_API_BASE_URL` yang mengarah ke backend publik.
+
+## Manual Development
+
+Backend:
+
+```bash
 cd backend
 python -m uvicorn main:app --reload --port 8000
 ```
 
-**Terminal 2 — Frontend**
-```powershell
+Frontend:
+
+```bash
 cd frontend
 npm run dev
 ```
 
-### Streamlit (alternatif, satu terminal)
-```powershell
+Frontend checks:
+
+```bash
+cd frontend
+npm run check
+npm run build
+```
+
+Streamlit alternatif:
+
+```bash
 pip install streamlit biopython pandas numpy plotly
 streamlit run app.py
 ```
 
----
-
-## Install Dependencies
-
-```powershell
-# Backend
-pip install fastapi uvicorn biopython numpy pydantic
-
-# Frontend
-cd frontend
-npm install
-```
-
----
-
-## Fitur
-
-- **3 Dataset**: Sintetik (panjang/jumlah SNP/GC/seed dapat diatur), HBB Sickle-Cell, Custom (input manual)
-- **Alignment Viewer**: setiap basa ditampilkan sebagai card kecil, warna per basa (A/T/G/C) dan per status (match/mismatch/gap)
-- **Deteksi Varian**: SNP, Insersi, Delesi
-- **Klasifikasi Dampak**: Silent, Missense, Nonsense, Stop Lost, Start Lost, Frameshift
-- **Insight otomatis**: distribusi dampak, temuan utama, dan kesimpulan naratif setelah pipeline dijalankan
-- **Tabel Varian**: sortable, filter by dampak/tipe, download CSV
-- **Charts**: track posisi SNP, distribusi dampak, matriks substitusi REF→ALT
-- **Perbandingan Protein**: highlight residu yang berubah
-- **Eksperimen Sensitivitas**: precision/recall/F1 vs densitas SNP, dengan zoom drag + tombol
-
----
-
 ## API Endpoints
 
 | Method | Path | Deskripsi |
-|--------|------|-----------|
-| GET | `/api/health` | Status server |
-| GET | `/api/presets` | Sekuens HBB wildtype & sickle |
-| POST | `/api/run` | Jalankan pipeline |
+| --- | --- | --- |
+| GET | `/api/health` | Status server dan limit runtime |
+| GET | `/api/presets` | Sekuens HBB wildtype dan sickle |
+| POST | `/api/run` | Jalankan pipeline SNP |
 | POST | `/api/sensitivity` | Eksperimen sensitivitas |
 
----
+## Fitur
 
-## Parameter Alignment
+- Dataset sintetik, HBB sickle-cell, dan custom.
+- Alignment viewer dengan status match, mismatch, dan gap.
+- Deteksi SNP, insersi, dan delesi.
+- Klasifikasi dampak: silent, missense, nonsense, stop lost, start lost, frameshift, in-frame indel.
+- Insight otomatis, tabel varian, CSV export, charts, dan perbandingan protein.
+- Eksperimen sensitivitas precision, recall, dan F1 terhadap densitas SNP.
+- Generator laporan LaTeX melalui `snp.py report`.
 
-| Parameter | Nilai |
-|-----------|-------|
-| Match | +2 |
-| Mismatch | −1 |
-| Gap open | −2 |
-| Gap extend | −1 |
+## Test Cases Custom Dataset, Frame 0
 
----
+Silent:
 
-## Test Cases (Custom Dataset, Frame 0)
+```text
+Ref: ATGAAAGCCTTT
+Smp: ATGAAGGCTTTC
+Expected: 3 SNP, semua SILENT, protein MKAF tidak berubah
+```
 
-### 1. Silent — protein tidak berubah
-```
-Ref:  ATGAAAGCCTTT
-Smp:  ATGAAGGCTTTC
-```
-Expected: 3 SNP, semua SILENT, protein `MKAF` tidak berubah
+Nonsense:
 
-### 2. Nonsense — kodon stop prematur
+```text
+Ref: ATGGAAGTGCAA
+Smp: ATGTAAGTGCAA
+Expected: 1 SNP pos 4 (G -> T), GAA -> TAA, Glu -> Stop, NONSENSE
 ```
-Ref:  ATGGAAGTGCAA
-Smp:  ATGTAAGTGCAA
-```
-Expected: 1 SNP pos 4 (G→T), GAA→TAA, Glu→Stop, NONSENSE
 
-### 3. Stop Lost — protein memanjang
-```
-Ref:  ATGCAATAACGT
-Smp:  ATGCAACAACGT
-```
-Expected: 1 SNP pos 7 (T→C), TAA→CAA, Stop→Gln, STOP_LOST
+Stop lost:
 
-### 4. Missense + Silent (campuran)
+```text
+Ref: ATGCAATAACGT
+Smp: ATGCAACAACGT
+Expected: 1 SNP pos 7 (T -> C), TAA -> CAA, Stop -> Gln, STOP_LOST
 ```
-Ref:  ATGGCAGATCCC
-Smp:  ATGGTAGATCCG
-```
-Expected: 2 SNP — pos 5 MISSENSE (Ala→Val), pos 12 SILENT (Pro→Pro)
 
-### 5. Identik — tidak ada varian
+Missense + silent:
+
+```text
+Ref: ATGGCAGATCCC
+Smp: ATGGTAGATCCG
+Expected: 2 SNP, pos 5 MISSENSE (Ala -> Val), pos 12 SILENT (Pro -> Pro)
 ```
-Ref:  ATGCGTTAA
-Smp:  ATGCGTTAA
-```
+
+Identik:
+
+```text
+Ref: ATGCGTTAA
+Smp: ATGCGTTAA
 Expected: 0 varian
-
----
-
-## Struktur Proyek
-
 ```
-SNP-Detection-Komputasi-Domain-Spesifik/
-├── app.py
-├── requirements.txt
-├── start.ps1
-├── .gitignore
-├── README.md
-├── backend/
-│   ├── main.py
-│   ├── pipeline.py
-│   └── requirements.txt
-├── frontend/
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   └── src/
-│       ├── App.tsx
-│       ├── api.ts
-│       ├── types.ts
-│       └── components/
-│           ├── InsightsPanel.tsx
-│           ├── AlignmentViewer.tsx
-│           ├── SNPTrack.tsx
-│           ├── ImpactChart.tsx
-│           ├── SubstitutionMatrix.tsx
-│           ├── SensitivityChart.tsx
-│           ├── VariantTable.tsx
-│           ├── ImpactBadge.tsx
-│           └── InputPanel.tsx
-├── notebook/
-│   └── snp_detection_pipeline.ipynb
-└── doc/
-    └── Laporan_SNP_Detection.docx (1).pdf
-```
-
----
 
 ## Referensi
 
-- Needleman & Wunsch (1970). *J. Mol. Biol.* 48(3), 443–453
-- Cock et al. (2009). Biopython. *Bioinformatics* 25(11)
-- Ingram (1957). Sickle cell. *Nature* 180, 326–328
+- Needleman & Wunsch (1970). Journal of Molecular Biology 48(3), 443-453.
+- Cock et al. (2009). Biopython. Bioinformatics 25(11).
+- Ingram (1957). Sickle cell. Nature 180, 326-328.

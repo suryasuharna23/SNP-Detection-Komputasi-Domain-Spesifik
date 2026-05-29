@@ -215,25 +215,31 @@ export default function App() {
                         </>
                       )}
 
-                      {resTab === "charts" && result.variants.length > 0 && (
-                        <div className="space-y-6">
-                          <div>
-                            <p className="section-title">
-                              <Activity size={14} className="text-emerald-600" /> Track Posisi SNP
-                            </p>
-                            <SNPTrack variants={result.variants} refLength={result.stats.ref_len} />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {resTab === "charts" && (
+                        result.variants.length === 0 ? (
+                          <p className="text-gray-400 text-sm text-center py-8">
+                            Tidak ada varian untuk divisualisasikan.
+                          </p>
+                        ) : (
+                          <div className="space-y-6">
                             <div>
-                              <p className="section-title">Distribusi Dampak</p>
-                              <ImpactChart variants={result.variants} />
+                              <p className="section-title">
+                                <Activity size={14} className="text-emerald-600" /> Track Posisi SNP
+                              </p>
+                              <SNPTrack variants={result.variants} refLength={result.stats.ref_len} />
                             </div>
-                            <div>
-                              <p className="section-title">Matriks Substitusi REF → ALT</p>
-                              <SubstitutionMatrix variants={result.variants} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                              <div>
+                                <p className="section-title">Distribusi Dampak</p>
+                                <ImpactChart variants={result.variants} />
+                              </div>
+                              <div>
+                                <p className="section-title">Matriks Substitusi REF → ALT</p>
+                                <SubstitutionMatrix variants={result.variants} />
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )
                       )}
 
                       {resTab === "protein" && (

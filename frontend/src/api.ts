@@ -1,6 +1,15 @@
 import type { PipelineResult, RunParams, SensitivityResult } from "./types";
 
-const BASE = "/api";
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "");
+
+function errorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object" && "message" in detail) {
+    const message = (detail as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return fallback;
+}
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -10,7 +19,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? "Request failed");
+    throw new Error(errorMessage(err.detail, res.statusText || "Request failed"));
   }
   return res.json() as Promise<T>;
 }

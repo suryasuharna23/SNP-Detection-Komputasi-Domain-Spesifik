@@ -24,8 +24,8 @@ export function InputPanel({ onRun, loading }: Props) {
   function handleRun() {
     onRun({
       dataset,
-      ref_seq:    dataset === "custom" ? refSeq : undefined,
-      sample_seq: dataset === "custom" ? smpSeq : undefined,
+      ref_seq:    dataset === "custom" ? refSeq.trim() : undefined,
+      sample_seq: dataset === "custom" ? smpSeq.trim() : undefined,
       seq_length: seqLen, n_snps: nSnps, gc_content: gc / 100, seed, frame,
     });
   }

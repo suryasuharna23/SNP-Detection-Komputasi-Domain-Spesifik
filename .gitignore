@@ -26,6 +26,7 @@ frontend/build/
 # ── Data & Output (generated at runtime) ─────────────────────────────────────
 data/
 output/
+reports/
 *.csv
 *.fasta
 

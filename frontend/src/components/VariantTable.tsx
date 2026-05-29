@@ -48,11 +48,17 @@ export function VariantTable({ variants }: Props) {
       `${v.alt_aa ?? ""}(${v.alt_aa_name ?? ""})`,
       v.impact,
     ]);
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const escapeCsv = (value: string | number) => {
+      const text = String(value);
+      return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const csv = [headers, ...rows].map((r) => r.map(escapeCsv).join(",")).join("\n");
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.href = url;
     a.download = "snp_variants.csv";
     a.click();
+    URL.revokeObjectURL(url);
   }
 
   const Th = ({ children, k }: { children: React.ReactNode; k: SortKey }) => (
