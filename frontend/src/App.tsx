@@ -11,15 +11,16 @@ import { SubstitutionMatrix } from "./components/SubstitutionMatrix";
 import { VariantTable }       from "./components/VariantTable";
 import { SensitivityChart }   from "./components/SensitivityChart";
 import { ImpactBadge }        from "./components/ImpactBadge";
+import { InsightsPanel }      from "./components/InsightsPanel";
 
-type ResultTab = "alignment" | "variants" | "charts" | "protein";
+type ResultTab = "insight" | "alignment" | "variants" | "charts" | "protein";
 
 export default function App() {
   const [tab,     setTab]     = useState<TabType>("demo");
   const [result,  setResult]  = useState<PipelineResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
-  const [resTab,  setResTab]  = useState<ResultTab>("alignment");
+  const [resTab,  setResTab]  = useState<ResultTab>("insight");
 
   const [sensLoading, setSensLoading] = useState(false);
   const [sensResult,  setSensResult]  = useState<SensitivityResult | null>(null);
@@ -32,7 +33,7 @@ export default function App() {
     setLoading(true); setError(null); setResult(null);
     try {
       const res = await runPipeline(params);
-      setResult(res); setResTab("alignment");
+      setResult(res); setResTab("insight");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
@@ -54,6 +55,7 @@ export default function App() {
   ];
 
   const RES_TABS: { id: ResultTab; label: string }[] = [
+    { id: "insight",   label: "Insight" },
     { id: "alignment", label: "Alignment" },
     { id: "variants",  label: "Varian" },
     { id: "charts",    label: "Charts" },
@@ -183,6 +185,10 @@ export default function App() {
                     </div>
 
                     <div className="p-5">
+                      {resTab === "insight" && (
+                        <InsightsPanel result={result} />
+                      )}
+
                       {resTab === "alignment" && (
                         <>
                           <p className="section-title">
@@ -471,7 +477,7 @@ function EvalMetric({ label, value, sub }: { label: string; value: number; sub?:
   const barColor = value >= 0.95 ? "bg-emerald-500" : value >= 0.8 ? "bg-amber-400" : "bg-red-400";
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-3 text-center shadow-sm">
-      <div className={`text-xl font-bold font-mono ${color}`}>{value.toFixed(3)}</div>
+      <div className={`text-xl font-bold ${color}`}>{value.toFixed(3)}</div>
       <div className="text-xs text-gray-500 font-medium">{label}</div>
       {sub && <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>}
       <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">

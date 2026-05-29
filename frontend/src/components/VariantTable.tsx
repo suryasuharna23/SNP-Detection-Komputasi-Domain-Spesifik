@@ -106,8 +106,8 @@ export function VariantTable({ variants }: Props) {
           <tbody>
             {sorted.map((v, i) => (
               <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="px-3 py-2 font-mono text-gray-700">{v.pos}</td>
-                <td className="px-3 py-2 font-mono text-gray-500">{v.variant_type}</td>
+                <td className="px-3 py-2 text-gray-700">{v.pos}</td>
+                <td className="px-3 py-2 text-gray-500">{v.variant_type}</td>
                 <td className="px-3 py-2 font-mono text-red-500 font-bold">{v.ref}</td>
                 <td className="px-3 py-2 font-mono text-blue-500 font-bold">{v.alt}</td>
                 <td className="px-3 py-2 text-gray-500">

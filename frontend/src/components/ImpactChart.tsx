@@ -25,15 +25,17 @@ export function ImpactChart({ variants }: Props) {
     .sort(([, a], [, b]) => b - a)
     .map(([impact, count]) => ({ impact, count }));
 
+  const FONT = { fontFamily: "Figtree, system-ui, sans-serif" };
+
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 40 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
         <XAxis
-          dataKey="impact" tick={{ fill: "#6b7280", fontSize: 11 }}
+          dataKey="impact" tick={{ fill: "#6b7280", fontSize: 11, ...FONT }}
           angle={-25} textAnchor="end" interval={0}
         />
-        <YAxis tick={{ fill: "#9ca3af", fontSize: 11 }} allowDecimals={false} />
+        <YAxis tick={{ fill: "#9ca3af", fontSize: 11, ...FONT }} allowDecimals={false} />
         <Tooltip
           contentStyle={{
             background: "#fff", border: "1px solid #e5e7eb",
